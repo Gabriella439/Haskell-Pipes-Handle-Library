@@ -1,0 +1,30 @@
+Name: pipes-handle
+Version: 1.0.0
+Cabal-Version: >=1.8.0.2
+Build-Type: Simple
+License: BSD3
+License-File: LICENSE
+Copyright: 2014 Gabriel Gonzalez
+Author: Gabriel Gonzalez
+Maintainer: Gabriel439@gmail.com
+Bug-Reports: https://github.com/Gabriel439/Haskell-Pipes-Handle-Library/issues
+Synopsis: Group streams into substreams
+Description: Model traditional handles using @pipes@
+    .
+    @Pipes.Read@ contains logic for read-only handles
+    .
+    @Pipes.Write@ contains logic for write-only handles
+Category: Control, Pipes
+Source-Repository head
+    Type: git
+    Location: https://github.com/Gabriel439/Haskell-Pipes-Handle-Library
+
+Library
+    HS-Source-Dirs: src
+    Build-Depends:
+        base         >= 4       && < 5  ,
+        pipes        >= 4.0     && < 4.2
+    Exposed-Modules:
+        Pipes.Read,
+        Pipes.Write
+    GHC-Options: -O2 -Wall
