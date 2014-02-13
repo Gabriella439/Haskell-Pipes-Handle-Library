@@ -17,6 +17,7 @@ module Pipes.Read (
     , show
 
     -- * Streaming
+    -- $stream
     , stream
     ) where
 
@@ -205,6 +206,17 @@ chain f = do
 show :: (Monad m, Show a) => Consumer a m String
 show = map Prelude.show
 {-# INLINABLE show #-}
+
+{- $stream
+    "Pipes.Read" idioms are 100% compatible with @pipes@ idioms.  Just use
+    'stream' to upgrade all read-only handles or transformations into their
+    equivalent @pipes@ idioms.
+
+    Note that you can also read directly from handles using ('>~') instead of
+    using 'stream':
+
+> stream f >-> p = f >~ p
+-}
 
 {-| Convert a read-only handle into a 'Producer':
 

@@ -24,6 +24,7 @@ module Pipes.Write (
     , show
 
     -- * Streaming
+    -- $stream
     , stream
     ) where
 
@@ -96,7 +97,7 @@ drain = discard
 > filter :: (a -> Bool) -> a -> Producer a m ()
 > filter predicate a = when (predicate a) (yield a)
 
-    'filter' only 'yield's the element to the downstream handle when the element
+    'filter' only 'yield's the element further downstream when the element
     satisfies the predicate.  Transformations may 'yield' multiple times to
     write more than once to downstream.
 
@@ -259,6 +260,17 @@ read str = case (reads str) of
 show :: (Monad m, Show a) => a -> Producer' String m ()
 show = map Prelude.show
 {-# INLINABLE show #-}
+
+{- $stream
+    "Pipes.Write" idioms are 100% compatible with @pipes@ idioms.  Just use
+    'stream' to upgrade all write-only handles or transformations into their
+    equivalent @pipes@ idioms.
+
+    Note that you can also directly write to handles using 'for' instead of
+    using 'stream':
+
+> p >-> stream f = for p f
+-}
 
 {-| 'stream' converts write-only handles into their equivalent @pipes@
     'Consumer's:
