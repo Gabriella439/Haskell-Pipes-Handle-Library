@@ -53,8 +53,8 @@ import qualified Prelude
 
 > Monad m => c -> Effect' m ()
 
-    The above write-only handle is an action that consumes a value of type @c@
-    and runs some effect in a base monad @m@.
+    The above write-only handle is an action that consumes a value of type
+    \'@c@\' and runs some effect in a base monad @m@.
 
     Defining a write-only handle is usually as simple as 'lift'ing an action
     from the base monad.  For example, 'print' is defined like this:
@@ -111,9 +111,9 @@ print a = liftIO (Prelude.print a)
 
 > Monad m => b -> Producer' c m ()
 
-    The above transformation accepts a new input of type @b@ and 'yield's a @c@
-    each time it wishes to write to downstream.  For example, here is how
-    'filter' is defined:
+    The above type represents a transformation that accepts a new input of type
+    \'@b@\' and 'yield's a \'@c@\' each time it wishes to write to downstream.
+    One such transformation is 'filter':
 
 > filter :: Monad m => (a -> Bool) -> a -> Producer' a m ()
 > filter predicate a = when (predicate a) (yield a)

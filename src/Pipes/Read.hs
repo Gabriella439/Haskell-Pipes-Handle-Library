@@ -86,9 +86,9 @@ repeatM = lift
 
 > Monad m => Consumer' a m b
 
-    The above transformation 'await's an \'@a@\' each time it wishes to read
-    from upstream and returns a new output of type \'@b@\'.  For example, here
-    is how 'filter' is defined:
+    The above type represents a transformation that 'await's an \'@a@\' each
+    time it wishes to read from upstream and returns a new output of type
+    \'@b@\'.  One such transformation is 'filter':
 
 > filter :: Monad m => (a -> Bool) -> Consumer' a m a
 > filter predicate = do
