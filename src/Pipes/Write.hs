@@ -9,6 +9,7 @@ module Pipes.Write (
       mapM_
     , toHandle
     , drain
+    , print
 
     -- * Write-only transformations
     -- $transform
@@ -23,6 +24,9 @@ module Pipes.Write (
     , read
     , show
 
+    -- * Utilities
+    , tee
+
     -- * Streaming
     -- $stream
     , stream
@@ -31,7 +35,17 @@ module Pipes.Write (
 import Control.Monad (when, void)
 import Pipes
 import qualified System.IO as IO
-import Prelude hiding (map, mapM, mapM_, read, show, sequence, concat, filter)
+import Prelude hiding
+    ( concat
+    , filter
+    , map
+    , mapM
+    , mapM_
+    , print
+    , read
+    , sequence
+    , show
+    )
 import qualified Prelude
 
 {- $writeonly
@@ -71,8 +85,8 @@ mapM_ f a = void (lift (f a))
 
 > Pipes.Prelude.toHandle h = stream (Pipes.Write.toHandle h)
 -}
-toHandle :: IO.Handle -> String -> Effect' IO ()
-toHandle handle str = lift (IO.hPutStrLn handle str)
+toHandle :: MonadIO m => IO.Handle -> String -> Effect' m ()
+toHandle handle str = liftIO (IO.hPutStrLn handle str)
 {-# INLINABLE toHandle #-}
 
 {-| A write-only handle that discards all values
@@ -83,18 +97,26 @@ drain :: Monad m => a -> Effect' m ()
 drain = discard
 {-# INLINABLE drain #-}
 
+{-| A write-only handle that 'Prelude.print's all values
+
+> Pipes.Prelude.print = stream Pipes.Write.print
+-}
+print :: (MonadIO m, Show a) => a -> Effect' m ()
+print a = liftIO (Prelude.print a)
+{-# INLINABLE print #-}
+
 {- $transform
     You can transform write-only handles to accept new input types by
-    precomposing transformations upstream of them.  @pipes@ models write-only
-    transformations as values of type:
+    precomposing transformations upstream of them.  @pipes@ models these
+    write-only transformations as values of type:
 
-> Monad m => b -> Producer c m ()
+> Monad m => b -> Producer' c m ()
 
     The above transformation accepts a new input of type @b@ and 'yield's a @c@
-    each time it wishes to write to the old handle.  For example, here is how
+    each time it wishes to write to downstream.  For example, here is how
     'filter' is defined:
 
-> filter :: (a -> Bool) -> a -> Producer a m ()
+> filter :: (a -> Bool) -> a -> Producer' a m ()
 > filter predicate a = when (predicate a) (yield a)
 
     'filter' only 'yield's the element further downstream when the element
@@ -163,8 +185,8 @@ TEST
 > f ~> yield = f
 
     Therefore, ('~>') and 'yield' form the category of write-only handles and
-    their transformations, where ('~>') is the composition operator and 'yield'
-    is the identity morphism.
+    their transformations, where ('~>') is the associative composition operator
+    and 'yield' is the identity morphism.
 -}
 
 {-| Transform a write-only handle using a function
@@ -261,10 +283,21 @@ show :: (Monad m, Show a) => a -> Producer' String m ()
 show = map Prelude.show
 {-# INLINABLE show #-}
 
+{-| Transform a write-only handle to a transformation that re-forwards the input
+    value
+
+> tee :: Monad m => (a -> Effect' m ()) -> (a -> Producer' a m ())
+-}
+tee :: Monad m => (a -> Proxy x' x () a m ()) -> a -> Proxy x' x () a m ()
+tee write a = do
+    write a
+    yield a
+{-# INLINABLE tee #-}
+
 {- $stream
-    "Pipes.Write" idioms are 100% compatible with @pipes@ idioms.  Just use
-    'stream' to upgrade all write-only handles or transformations into their
-    equivalent @pipes@ idioms.
+    "Pipes.Write" idioms are 100% compatible with @pipes@ idioms.  Use 'stream'
+    to upgrade all write-only handles or transformations into their equivalent
+    @pipes@ idioms.
 
     Note that you can also directly write to handles using 'for' instead of
     using 'stream':

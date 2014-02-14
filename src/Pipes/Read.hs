@@ -19,13 +19,18 @@ module Pipes.Read (
     , read
     , show
 
+    -- * Utilities
+    , zip
+    , zipWith
+
     -- * Streaming
     -- $stream
     , stream
     ) where
 
+import Control.Applicative (Applicative, liftA2)
 import Pipes
-import Prelude hiding (map, mapM, filter, sequence, read, show)
+import Prelude hiding (map, mapM, filter, sequence, read, show, zip, zipWith)
 import qualified Prelude
 
 {- $readOnly
@@ -42,7 +47,7 @@ import qualified Prelude
 > repeatM :: m a -> Effect' m a
 > repeatM = lift
 
-    To read from a handle, just call 'runEffect':
+    To read from a handle, use 'runEffect':
 
 >>> runEffect (repeatM getLine)
 Test<Enter>
@@ -75,28 +80,26 @@ repeatM = lift
 
 {- $transform
     You can transform read-only handles to produce new output types by composing
-    transformations downstream of them.  @pipes@ models read-only
+    transformations downstream of them.  @pipes@ models these read-only
     transformations as values of type:
 
 > Monad m => Consumer' a m b
 
     The above transformation 'await's an \'@a@\' each time it wishes to read
-    from the old handle and returns a new output of type \'@b@\'.  For example,
-    here is a transformation that reads twice from upstream and concatenates the
-    results into a single output:
+    from upstream and returns a new output of type \'@b@\'.  For example, here
+    is how 'filter' is defined:
 
-> import Pipes
-> import qualified Pipes.Read as R
->
-> double :: Monad m => Consumer' String m String
-> double = do
->     str1 <- await
->     str2 <- await
->     return (str1 ++ " " ++ str2)
+> filter :: (a -> Bool) -> Consumer a m a
+> filter predicate = do
+>     a <- await
+>     if (predicate a)
+>         then return a
+>         else filter predicate
 
-    'double' uses 'await' to read from upstream twice and the return value
-    provides the new output.  Transformations may 'await' multiple times to read
-    more than once from upstream.
+    'filter' uses 'await' to read from upstream as many times as necessary until
+    the predicate is satisfied and the return value provides the final output.
+    Transformations may 'await' multiple times to read more than once from
+    upstream.
 
     You compose transformations downstream of handles using ('>~'):
 
@@ -104,19 +107,22 @@ repeatM = lift
 >      -> Consumer a m b
 >      -> Effect     m b
 
-    For example, you can create a new read-only handle that reads two lines of
-    input each time you query it:
+    For example, you can create a new read-only handle that only emits non-empty
+    lines of input:
 
-> doubleLine :: Effect' IO String
-> doubleLine = repeatM getLine >~ double
+> import Pipes
+> import qualified Pipes.Read as R
+>
+> notNull :: Effect' IO String
+> notNull = R.repeatM getLine >~ R.filter (not . null)
 
     This generates a new read-only handle, which you can read from the same way
     as a primitive handle, using 'runEffect':
 
->>> runEffect doubleLine
-Test<Enter>
-abc<Enter>
-Test abc
+>>> runEffect notNull
+<Enter>
+Test<enter>
+"Test"
 >>>
 
     You can compose transformations, too, using the same ('>~') operator:
@@ -130,25 +136,25 @@ Test abc
 > import Data.Char (toUpper)
 >
 > read1 :: Effect' IO String
-> read1 = (R.repeatM getLine ~> double) ~> R.map (map toUpper)
+> read1 = (R.repeatM getLine ~> R.filter (not . null)) ~> R.map (map toUpper)
 >
 > read2 :: Effect' IO String
-> read2 = R.repeatM getLine ~> (double ~> R.map (map toUpper))
+> read2 = R.repeatM getLine ~> (R.filter (not . null) ~> R.map (map toUpper))
 
     They will always behave identically because ('>~') is associative:
 
 >>> runEffect read1
+<Enter>
 Test<Enter>
-abc<Enter>
-TEST ABC
+"TEST"
 >>> runEffect read2
+<Enter>
 Test<Enter>
-abc<Enter>
-TEST ABC
+"TEST"
 
     Therefore you can omit the parentheses since the behavior is unambiguous:
 
-> read = R.repeatM getLine ~> double ~> R.map (map toUpper)
+> read = R.repeatM getLine ~> R.filter (not . null) ~> R.map (map toUpper)
 
     Also, 'await' is the identity transformation which auto-forwards all
     read requests further upstream:
@@ -158,8 +164,8 @@ TEST ABC
 > f >~ await = f
 
     Therefore, ('>~') and 'await' form the category of read-only handles and
-    their transformations, where ('>~') is the composition operator and 'await'
-    is the identity morphism.
+    their transformations, where ('>~') is the associative composition operator
+    and 'await' is the identity morphism.
 -}
 
 {-| Transform a read-only handle using a function
@@ -257,10 +263,34 @@ show :: (Monad m, Show a) => Consumer' a m String
 show = map Prelude.show
 {-# INLINABLE show #-}
 
+{-| Zip two read-only handles or two transformations:
+
+> zip :: Monad m => Effect'     m a -> Effect'     m b -> Effect'     m (a, b)
+>
+> zip :: Monad m => Consumer' x m a -> Consumer' x m b -> Consumer' x m (a, b)
+-}
+zip :: Applicative f => f a -> f b -> f (a, b)
+zip read1 read2 = liftA2 (,) read1 read2
+{-# INLINABLE zip #-}
+
+{-| Zip two read-only handles or two transformations using the given function:
+
+> zipWith
+>     :: Monad m
+>     => (a -> b -> c) -> Effect'     m a -> Effect'     m b -> Effect'     m c
+>
+> zipWith
+>     :: Monad m
+>     => (a -> b -> c) -> Consumer' x m a -> Consumer' x m b -> Consumer' x m c
+-}
+zipWith :: Applicative f => (a -> b -> c) -> f a -> f b -> f c
+zipWith f read1 read2 = liftA2 f read1 read2
+{-# INLINABLE zipWith #-}
+
 {- $stream
-    "Pipes.Read" idioms are 100% compatible with @pipes@ idioms.  Just use
-    'stream' to upgrade all read-only handles or transformations into their
-    equivalent @pipes@ idioms.
+    "Pipes.Read" idioms are 100% compatible with @pipes@ idioms.  Use 'stream'
+    to upgrade all read-only handles or transformations into their equivalent
+    @pipes@ idioms.
 
     Note that you can also read directly from handles using ('>~') instead of
     using 'stream':
