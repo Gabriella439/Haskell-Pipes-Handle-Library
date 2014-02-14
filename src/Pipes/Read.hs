@@ -12,8 +12,11 @@ module Pipes.Read (
     -- $transform
     , map
     , mapM
+    , filter
+    , filterM
     , sequence
     , chain
+    , read
     , show
 
     -- * Streaming
@@ -22,7 +25,7 @@ module Pipes.Read (
     ) where
 
 import Pipes
-import Prelude hiding (map, mapM, sequence, show)
+import Prelude hiding (map, mapM, filter, sequence, read, show)
 import qualified Prelude
 
 {- $readOnly
@@ -75,7 +78,7 @@ repeatM = lift
     transformations downstream of them.  @pipes@ models read-only
     transformations as values of type:
 
-> Monad m => Consumer a m b
+> Monad m => Consumer' a m b
 
     The above transformation 'await's an \'@a@\' each time it wishes to read
     from the old handle and returns a new output of type \'@b@\'.  For example,
@@ -85,7 +88,7 @@ repeatM = lift
 > import Pipes
 > import qualified Pipes.Read as R
 >
-> double :: Monad m => Consumer String m String
+> double :: Monad m => Consumer' String m String
 > double = do
 >     str1 <- await
 >     str2 <- await
@@ -177,11 +180,42 @@ mapM f = do
     lift (f a)
 {-# INLINABLE mapM #-}
 
+{-| Transform a read-only handle to only output elements that satisfy a
+    predicate
+
+> Pipes.Prelude.filter f = stream (Pipes.Read.filter f)
+-}
+filter :: Monad m => (a -> Bool) -> Consumer' a m a
+filter predicate = go
+  where
+    go = do
+        a <- await
+        if (predicate a)
+            then return a
+            else go
+{-# INLINABLE filter #-}
+
+{-| Transform a read-only handle to only output elements that satisfy a
+    monadic predicate
+
+> Pipes.Prelude.filter f = stream (Pipes.Read.filter f)
+-}
+filterM :: Monad m => (a -> m Bool) -> Consumer' a m a
+filterM predicate = go
+  where
+    go = do
+        a <- await
+        keep <- lift (predicate a)
+        if keep
+            then return a
+            else go
+{-# INLINABLE filterM #-}
+
 {-| Transform a read-only handle to output the result of a monadic action
 
 > Pipes.Prelude.sequence = stream Pipes.Read.sequence
 -}
-sequence :: Monad m => Consumer (m a) m a
+sequence :: Monad m => Consumer' (m a) m a
 sequence = do
     m <- await
     lift m
@@ -192,18 +226,34 @@ sequence = do
 
 > Pipes.Prelude.chain f = stream (Pipes.Read.chain f)
 -}
-chain :: Monad m => (a -> m ()) -> Consumer a m a
+chain :: Monad m => (a -> m ()) -> Consumer' a m a
 chain f = do
     a <- await
     lift (f a)
     return a
 {-# INLINABLE chain #-}
 
+{-| Transform a read-only handle to parse values using 'Read'
+
+    Parse failures are discarded
+
+> Pipes.Prelude.read = stream Pipes.Read.read
+-}
+read :: (Monad m, Read a) => Consumer' String m a
+read = go
+  where
+    go = do
+        str <- await
+        case (reads str) of
+            [(a, "")] -> return a
+            _         -> go
+{-# INLINABLE read #-}
+
 {-| Transform a read-only handle to 'Show' all outputs
 
 > Pipes.Prelude.show = stream Pipes.Read.show
 -}
-show :: (Monad m, Show a) => Consumer a m String
+show :: (Monad m, Show a) => Consumer' a m String
 show = map Prelude.show
 {-# INLINABLE show #-}
 
