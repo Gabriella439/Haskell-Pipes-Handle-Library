@@ -57,18 +57,17 @@ import qualified Prelude
     and runs some effect in a base monad @m@.
 
     Defining a write-only handle is usually as simple as 'lift'ing an action
-    from the base monad.  For example, 'toHandle' is defined like this:
+    from the base monad.  For example, 'print' is defined like this:
 
-> toHandle :: Handle -> String -> Effect' IO ()
-> toHandle handle string = lift (hPutStrLn handle string)
+> print :: Show a => a -> Effect' IO ()
+> print a = lift (Prelude.print a)
 
     To write to a handle, supply the handle with a value and call 'runEffect':
 
 >>> import Pipes
 >>> import qualified Pipes.Write as W
->>> import qualified System.IO as IO
->>> runEffect (W.toHandle IO.stdout "Test")
-Test
+>>> runEffect (W.print 1)
+1
 >>>
 
 -}
@@ -116,7 +115,7 @@ print a = liftIO (Prelude.print a)
     each time it wishes to write to downstream.  For example, here is how
     'filter' is defined:
 
-> filter :: (a -> Bool) -> a -> Producer' a m ()
+> filter :: Monad m => (a -> Bool) -> a -> Producer' a m ()
 > filter predicate a = when (predicate a) (yield a)
 
     'filter' only 'yield's the element further downstream when the element
@@ -134,18 +133,17 @@ print a = liftIO (Prelude.print a)
 
 > import Pipes
 > import qualified Pipes.Write as W
-> import qualified System.IO   as IO
 >
-> notNulls :: String -> Effect' IO ()
-> notNulls = W.filter (not . null) ~> toHandle IO.stdout
+> printPositive :: Int -> Effect' IO ()
+> printPositive = W.filter (> 0) ~> W.print
 
     This generates a new write-only handle, which you can write to the same way
     as a primitive handle, using 'runEffect':
 
->>> runEffect $ notNulls "Test"
-Test
->>> runEffect $ notNulls ""
->>> -- Notice how 'filter' did not forward the string to 'toHandle'
+>>> runEffect $ printPositive 10
+10
+>>> runEffect $ printPositive (-1)
+>>> -- Notice how 'filter' did not forward the string to 'print'
 
     You can compose transformations, too, using the same ('~>') operator:
 
@@ -155,27 +153,25 @@ Test
 
     It doesn't matter what order you compose transformations or handles:
 
-> import Data.Char (toUpper)
+> write1 :: Int -> Effect' IO ()
+> write1 = (W.map negate ~> W.filter (> 0)) ~> W.print
 >
-> write1 :: String -> Effect' IO ()
-> write1 = (W.map (map toUpper) ~> W.filter (not . null)) ~> toHandle IO.stdout
->
-> write1 :: String -> Effect' IO ()
-> write2 = W.map (map toUpper) ~> (W.filter (not . null) ~> toHandle IO.stdout)
+> write2 :: Int -> Effect' IO ()
+> write2 = W.map negate ~> (W.filter (> 0) ~> W.print)
 
     They will always behave identically because ('~>') is associative:
 
->>> runEffect $ write1 "Test"
-TEST
->>> runEffect $ write2 "Test"
-TEST
->>> runEffect $ write1 ""
->>> runEffect $ write2 ""
+>>> runEffect $ write1 (-5)
+5
+>>> runEffect $ write2 (-5)
+5
+>>> runEffect $ write1 5
+>>> runEffect $ write2 5
 >>>
 
     Therefore you can omit the parentheses since the behavior is unambiguous:
 
-> write = W.map (map toUpper) ~> W.filter (not . null) ~> toHandle IO.stdout
+> write = W.map negate ~> W.filter (> 0) ~> W.print
 
     Also, 'yield' is the identity transformation which auto-forwards all values
     along further downstream:

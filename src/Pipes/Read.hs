@@ -42,7 +42,8 @@ import qualified Prelude
     monad @m@ and produces a value of type \'@a@\'.
 
     Defining a read-only handle is usually as simple as 'lift'ing an action from
-    the base monad.  For example, 'repeatM' is defined like this:
+    the base monad.  For example, 'repeatM' is more verbose than its
+    implementation:
 
 > repeatM :: m a -> Effect' m a
 > repeatM = lift
@@ -89,7 +90,7 @@ repeatM = lift
     from upstream and returns a new output of type \'@b@\'.  For example, here
     is how 'filter' is defined:
 
-> filter :: (a -> Bool) -> Consumer a m a
+> filter :: Monad m => (a -> Bool) -> Consumer' a m a
 > filter predicate = do
 >     a <- await
 >     if (predicate a)
@@ -136,10 +137,10 @@ Test<enter>
 > import Data.Char (toUpper)
 >
 > read1 :: Effect' IO String
-> read1 = (R.repeatM getLine ~> R.filter (not . null)) ~> R.map (map toUpper)
+> read1 = (R.repeatM getLine >~ R.filter (not . null)) >~ R.map (map toUpper)
 >
 > read2 :: Effect' IO String
-> read2 = R.repeatM getLine ~> (R.filter (not . null) ~> R.map (map toUpper))
+> read2 = R.repeatM getLine >~ (R.filter (not . null) >~ R.map (map toUpper))
 
     They will always behave identically because ('>~') is associative:
 
@@ -154,7 +155,7 @@ Test<Enter>
 
     Therefore you can omit the parentheses since the behavior is unambiguous:
 
-> read = R.repeatM getLine ~> R.filter (not . null) ~> R.map (map toUpper)
+> read = R.repeatM getLine >~ R.filter (not . null) >~ R.map (map toUpper)
 
     Also, 'await' is the identity transformation which auto-forwards all
     read requests further upstream:
@@ -270,7 +271,7 @@ show = map Prelude.show
 > zip :: Monad m => Consumer' x m a -> Consumer' x m b -> Consumer' x m (a, b)
 -}
 zip :: Applicative f => f a -> f b -> f (a, b)
-zip read1 read2 = liftA2 (,) read1 read2
+zip = liftA2 (,)
 {-# INLINABLE zip #-}
 
 {-| Zip two read-only handles or two transformations using the given function:
@@ -284,7 +285,7 @@ zip read1 read2 = liftA2 (,) read1 read2
 >     => (a -> b -> c) -> Consumer' x m a -> Consumer' x m b -> Consumer' x m c
 -}
 zipWith :: Applicative f => (a -> b -> c) -> f a -> f b -> f c
-zipWith f read1 read2 = liftA2 f read1 read2
+zipWith = liftA2
 {-# INLINABLE zipWith #-}
 
 {- $stream
