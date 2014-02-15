@@ -9,7 +9,7 @@ Author: Gabriel Gonzalez
 Maintainer: Gabriel439@gmail.com
 Bug-Reports: https://github.com/Gabriel439/Haskell-Pipes-Handle-Library/issues
 Synopsis: Group streams into substreams
-Description: Model traditional, non-recursive handles using @pipes@
+Description: Model traditional handles using @pipes@
     .
     @Pipes.Read@ contains logic for read-only handles
     .
