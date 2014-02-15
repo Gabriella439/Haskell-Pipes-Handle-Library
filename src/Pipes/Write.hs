@@ -3,6 +3,8 @@
 > import qualified Pipes.Write as W
 -}
 
+{-# LANGUAGE RankNTypes #-}
+
 module Pipes.Write (
     -- * Write-only handles
     -- $writeonly
