@@ -1,9 +1,9 @@
 {-| This module is designed to be imported qualified:
 
-> import qualified Pipes.Read as R
+> import qualified Pipes.Reader as R
 -}
 
-module Pipes.Read (
+module Pipes.Reader (
     -- * Read-only Handles
     -- $readOnly
       repeatM
@@ -73,7 +73,7 @@ Test
 
 {-| Create a read-only handle that endlessly repeats the same read action
 
-> Pipes.Prelude.repeatM m = stream (Pipes.Read.repeatM m)
+> Pipes.Prelude.repeatM m = stream (Pipes.Reader.repeatM m)
 -}
 repeatM :: Monad m => m a -> Effect' m a
 repeatM = lift
@@ -112,7 +112,7 @@ repeatM = lift
     lines of input:
 
 > import Pipes
-> import qualified Pipes.Read as R
+> import qualified Pipes.Reader as R
 >
 > notNull :: Effect' IO String
 > notNull = R.repeatM getLine >~ R.filter (not . null)
@@ -171,7 +171,7 @@ Test<Enter>
 
 {-| Transform a read-only handle using a function
 
-> Pipes.Prelude.map f = stream (Pipes.Read.map f)
+> Pipes.Prelude.map f = stream (Pipes.Reader.map f)
 -}
 map :: Monad m => (a -> b) -> Consumer' a m b
 map f = fmap f await
@@ -179,7 +179,7 @@ map f = fmap f await
 
 {-| Transform a read-only handle using a monadic function
 
-> Pipes.Prelude.mapM f = stream (Pipes.Read.mapM f)
+> Pipes.Prelude.mapM f = stream (Pipes.Reader.mapM f)
 -}
 mapM :: Monad m => (a -> m b) -> Consumer' a m b
 mapM f = do
@@ -190,7 +190,7 @@ mapM f = do
 {-| Transform a read-only handle to only output elements that satisfy a
     predicate
 
-> Pipes.Prelude.filter f = stream (Pipes.Read.filter f)
+> Pipes.Prelude.filter f = stream (Pipes.Reader.filter f)
 -}
 filter :: Monad m => (a -> Bool) -> Consumer' a m a
 filter predicate = go
@@ -205,7 +205,7 @@ filter predicate = go
 {-| Transform a read-only handle to only output elements that satisfy a
     monadic predicate
 
-> Pipes.Prelude.filter f = stream (Pipes.Read.filter f)
+> Pipes.Prelude.filter f = stream (Pipes.Reader.filter f)
 -}
 filterM :: Monad m => (a -> m Bool) -> Consumer' a m a
 filterM predicate = go
@@ -220,7 +220,7 @@ filterM predicate = go
 
 {-| Transform a read-only handle to output the result of a monadic action
 
-> Pipes.Prelude.sequence = stream Pipes.Read.sequence
+> Pipes.Prelude.sequence = stream Pipes.Reader.sequence
 -}
 sequence :: Monad m => Consumer' (m a) m a
 sequence = do
@@ -231,7 +231,7 @@ sequence = do
 {-| Transform a read-only handle by running an action right before returning the
     result:
 
-> Pipes.Prelude.chain f = stream (Pipes.Read.chain f)
+> Pipes.Prelude.chain f = stream (Pipes.Reader.chain f)
 -}
 chain :: Monad m => (a -> m ()) -> Consumer' a m a
 chain f = do
@@ -244,7 +244,7 @@ chain f = do
 
     Parse failures are discarded
 
-> Pipes.Prelude.read = stream Pipes.Read.read
+> Pipes.Prelude.read = stream Pipes.Reader.read
 -}
 read :: (Monad m, Read a) => Consumer' String m a
 read = go
@@ -258,7 +258,7 @@ read = go
 
 {-| Transform a read-only handle to 'Show' all outputs
 
-> Pipes.Prelude.show = stream Pipes.Read.show
+> Pipes.Prelude.show = stream Pipes.Reader.show
 -}
 show :: (Monad m, Show a) => Consumer' a m String
 show = map Prelude.show
@@ -289,7 +289,7 @@ zipWith = liftA2
 {-# INLINABLE zipWith #-}
 
 {- $stream
-    "Pipes.Read" idioms are 100% compatible with @pipes@ idioms.  Use 'stream'
+    "Pipes.Reader" idioms are 100% compatible with @pipes@ idioms.  Use 'stream'
     to upgrade all read-only handles or transformations into their equivalent
     @pipes@ idioms.
 

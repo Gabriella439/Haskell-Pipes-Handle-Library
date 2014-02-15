@@ -1,9 +1,9 @@
 {-| This module is designed to be imported qualified:
 
-> import qualified Pipes.Write as W
+> import qualified Pipes.Writer as W
 -}
 
-module Pipes.Write (
+module Pipes.Writer (
     -- * Write-only handles
     -- $writeonly
       mapM_
@@ -65,7 +65,7 @@ import qualified Prelude
     To write to a handle, supply the handle with a value and call 'runEffect':
 
 >>> import Pipes
->>> import qualified Pipes.Write as W
+>>> import qualified Pipes.Writer as W
 >>> runEffect (W.print 1)
 1
 >>>
@@ -74,7 +74,7 @@ import qualified Prelude
 
 {-| Create a write-only handle from a monadic function
 
-> Pipes.Prelude.mapM_ f = stream (Pipes.Write.mapM_ f)
+> Pipes.Prelude.mapM_ f = stream (Pipes.Writer.mapM_ f)
 -}
 mapM_ :: Monad m => (a -> m b) -> a -> Effect' m ()
 mapM_ f a = void (lift (f a))
@@ -82,7 +82,7 @@ mapM_ f a = void (lift (f a))
 
 {-| Create a write-only handle from a traditional 'IO.Handle'
 
-> Pipes.Prelude.toHandle h = stream (Pipes.Write.toHandle h)
+> Pipes.Prelude.toHandle h = stream (Pipes.Writer.toHandle h)
 -}
 toHandle :: MonadIO m => IO.Handle -> String -> Effect' m ()
 toHandle handle str = liftIO (IO.hPutStrLn handle str)
@@ -90,7 +90,7 @@ toHandle handle str = liftIO (IO.hPutStrLn handle str)
 
 {-| A write-only handle that discards all values
 
-> Pipes.Prelude.drain = stream Pipes.Write.drain
+> Pipes.Prelude.drain = stream Pipes.Writer.drain
 -}
 drain :: Monad m => a -> Effect' m ()
 drain = discard
@@ -98,7 +98,7 @@ drain = discard
 
 {-| A write-only handle that 'Prelude.print's all values
 
-> Pipes.Prelude.print = stream Pipes.Write.print
+> Pipes.Prelude.print = stream Pipes.Writer.print
 -}
 print :: (MonadIO m, Show a) => a -> Effect' m ()
 print a = liftIO (Prelude.print a)
@@ -132,7 +132,7 @@ print a = liftIO (Prelude.print a)
     null 'String's by pre-composing 'filter' upstream of 'toHandle':
 
 > import Pipes
-> import qualified Pipes.Write as W
+> import qualified Pipes.Writer as W
 >
 > printPositive :: Int -> Effect' IO ()
 > printPositive = W.filter (> 0) ~> W.print
@@ -187,7 +187,7 @@ print a = liftIO (Prelude.print a)
 
 {-| Transform a write-only handle using a function
 
-> Pipes.Prelude.map f = stream (Pipes.Write.map f)
+> Pipes.Prelude.map f = stream (Pipes.Writer.map f)
 -}
 map :: Monad m => (a -> b) -> a -> Producer' b m ()
 map f a = yield (f a)
@@ -195,7 +195,7 @@ map f a = yield (f a)
 
 {-| Transform a write-only handle using a monadic function
 
-> Pipes.Prelude.mapM f = stream (Pipes.Write.mapM f)
+> Pipes.Prelude.mapM f = stream (Pipes.Writer.mapM f)
 -}
 mapM :: Monad m => (a -> m b) -> a -> Producer' b m ()
 mapM f a = do
@@ -205,7 +205,7 @@ mapM f a = do
 
 {-| Transform a write-only handle using a foldable function
 
-> Pipes.Prelude.mapFoldable f = stream (Pipes.Write.mapFoldable f)
+> Pipes.Prelude.mapFoldable f = stream (Pipes.Writer.mapFoldable f)
 -}
 mapFoldable :: (Monad m, Foldable t) => (a -> t b) -> a -> Producer' b m ()
 mapFoldable f a = each (f a)
@@ -213,7 +213,7 @@ mapFoldable f a = each (f a)
 
 {-| Transform a write-only handle to process individual elements of a 'Foldable'
 
-> Pipes.Prelude.concat = stream Pipes.Write.concat
+> Pipes.Prelude.concat = stream Pipes.Writer.concat
 -}
 concat :: (Monad m, Foldable t) => t a -> Producer' a m ()
 concat = each
@@ -222,7 +222,7 @@ concat = each
 {-| Transform a write-only handle to only process elements that satisfy a
     predicate
 
-> Pipes.Prelude.filter f = stream (Pipes.Write.filter f)
+> Pipes.Prelude.filter f = stream (Pipes.Writer.filter f)
 -}
 filter :: Monad m => (a -> Bool) -> a -> Producer' a m ()
 filter f a = when (f a) (yield a)
@@ -231,7 +231,7 @@ filter f a = when (f a) (yield a)
 {-| Transform a write-only handle to only process elements that satisfy a
     monadic predicate
 
-> Pipes.Prelude.filterM f = stream (Pipes.Write.filterM f)
+> Pipes.Prelude.filterM f = stream (Pipes.Writer.filterM f)
 -}
 filterM :: Monad m => (a -> m Bool) -> a -> Producer' a m ()
 filterM f a = do
@@ -241,7 +241,7 @@ filterM f a = do
 
 {-| Transform a write-only handle to process the results of monadic actions
 
-> Pipes.Prelude.sequence = stream Pipes.Write.sequence
+> Pipes.Prelude.sequence = stream Pipes.Writer.sequence
 -}
 sequence :: Monad m => m a -> Producer' a m ()
 sequence m = do
@@ -251,7 +251,7 @@ sequence m = do
 
 {-| Transform a write-only handle by running an action before all writes
 
-> Pipes.Prelude.chain f = stream (Pipes.Write.chain f)
+> Pipes.Prelude.chain f = stream (Pipes.Writer.chain f)
 -}
 chain :: Monad m => (a -> m ()) -> a -> Producer' a m ()
 chain f a = do
@@ -263,7 +263,7 @@ chain f a = do
 
     Parse failures are discarded
 
-> Pipes.Prelude.read = stream Pipes.Write.read
+> Pipes.Prelude.read = stream Pipes.Writer.read
 -}
 read :: (Monad m, Read a) => String -> Producer' a m ()
 read str = case (reads str) of
@@ -273,7 +273,7 @@ read str = case (reads str) of
 
 {-| Transform a write-only handle to process 'Show'n values
 
-> Pipes.Prelude.show = stream Pipes.Write.show
+> Pipes.Prelude.show = stream Pipes.Writer.show
 -}
 show :: (Monad m, Show a) => a -> Producer' String m ()
 show = map Prelude.show
@@ -291,7 +291,7 @@ tee write a = do
 {-# INLINABLE tee #-}
 
 {- $stream
-    "Pipes.Write" idioms are 100% compatible with @pipes@ idioms.  Use 'stream'
+    "Pipes.Writer" idioms are 100% compatible with @pipes@ idioms.  Use 'stream'
     to upgrade all write-only handles or transformations into their equivalent
     @pipes@ idioms.
 
