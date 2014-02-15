@@ -3,6 +3,8 @@
 > import qualified Pipes.Read as R
 -}
 
+{-# LANGUAGE RankNTypes #-}
+
 module Pipes.Read (
     -- * Read-only Handles
     -- $readOnly
